@@ -1,0 +1,6 @@
+*.so
+*.exe
+*.dylib
+*.test
+*.out
+test/cov.out
