@@ -25,6 +25,8 @@ func loadLisp() {
 	scope := slip.NewScope()
 	for _, path := range []string{
 		"lisp/messages.lisp",
+		"lisp/callbacks.lisp",
+		"lisp/runnable.lisp",
 	} {
 		f, err := lispFS.Open(path)
 		if err != nil {
