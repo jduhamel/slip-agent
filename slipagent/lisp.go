@@ -27,6 +27,7 @@ func loadLisp() {
 		"lisp/messages.lisp",
 		"lisp/callbacks.lisp",
 		"lisp/runnable.lisp",
+		"lisp/composition.lisp",
 	} {
 		f, err := lispFS.Open(path)
 		if err != nil {

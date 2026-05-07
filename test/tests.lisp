@@ -13,6 +13,7 @@
 (load "plugins/slip-agent/test/messages_test.lisp")
 (load "plugins/slip-agent/test/callbacks_test.lisp")
 (load "plugins/slip-agent/test/runnable_test.lisp")
+(load "plugins/slip-agent/test/composition_test.lisp")
 
 (defun run-tests ()
   (send agent-suite :run)
