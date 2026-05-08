@@ -38,6 +38,9 @@ func loadLisp() {
 		"lisp/providers/anthropic.lisp",
 		"lisp/providers/openai.lisp",
 		"lisp/providers/ollama.lisp",
+		"lisp/init-chat-model.lisp",
+		"lisp/documents.lisp",
+		"lisp/chat-history.lisp",
 	} {
 		f, err := lispFS.Open(path)
 		if err != nil {
