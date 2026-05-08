@@ -30,6 +30,7 @@
 (load "plugins/slip-agent/test/chat-history_test.lisp")
 (load "plugins/slip-agent/test/embeddings_test.lisp")
 (load "plugins/slip-agent/test/vector-stores_test.lisp")
+(load "plugins/slip-agent/test/agents_test.lisp")
 
 (defun run-tests ()
   (send agent-suite :run)
