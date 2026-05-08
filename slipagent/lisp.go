@@ -36,6 +36,8 @@ func loadLisp() {
 		"lisp/sse.lisp",
 		"lisp/http-helpers.lisp",
 		"lisp/providers/anthropic.lisp",
+		"lisp/providers/openai.lisp",
+		"lisp/providers/ollama.lisp",
 	} {
 		f, err := lispFS.Open(path)
 		if err != nil {

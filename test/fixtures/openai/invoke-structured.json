@@ -1,0 +1,23 @@
+{
+  "id": "chatcmpl-GHI",
+  "object": "chat.completion",
+  "created": 1715000002,
+  "model": "gpt-4o-2024-08-06",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "{\"answer\":42,\"confidence\":\"high\"}",
+        "refusal": null
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 50,
+    "completion_tokens": 15,
+    "total_tokens": 65
+  }
+}
