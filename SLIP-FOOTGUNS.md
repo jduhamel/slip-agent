@@ -66,7 +66,45 @@ Workaround: `(export 'helper)` for any helper called across defun boundaries fro
 
 ### `defparameter` from a plugin file isn't visible cross-package either
 
-Same root cause as the above.  Avoid plugin-private special variables that user code (or plugin code called from user-package context) needs to read.  Either inline the value at each use site or export the parameter.
+Same root cause as the above.  Avoid plugin-private special variables that user code (or plugin code called from user-package context) needs to read.
+
+```lisp
+;; Wrong — fails when accessed from a method body called via send
+;; from cl-user, even with (export '*anthropic-default-base-url*).
+(defparameter *anthropic-default-base-url* "https://...")
+
+(defmethod (chat-anthropic :invoke-impl) (...)
+  (let ((url (or base-url *anthropic-default-base-url*))) ...))
+;; => "Variable *anthropic-default-base-url* is unbound."
+
+;; Right — wrap as a zero-arg function.  Function lookup is more
+;; reliable than special-variable lookup across packages.
+(defun anthropic-default-base-url () "https://...")
+(export 'anthropic-default-base-url)
+
+(defmethod (chat-anthropic :invoke-impl) (...)
+  (let ((url (or base-url (anthropic-default-base-url)))) ...))
+```
+
+### `name` is shadowed by the deftest framework's per-test variable
+
+A parameter or local variable named `name` is shadowed when used inside a `(deftest "test-name" suite ...)` body — the test framework binds `name` to the test's name string at run time, and a closure captured inside the deftest body picks up the framework's binding rather than the user's.
+
+```lisp
+;; Wrong — `name` collides with deftest's per-test variable
+(defun build-poster (subdir name)
+  (lambda (url) (read-fixture subdir name)))   ;; closes over deftest's name
+
+(deftest "my test" suite
+  (let ((p (build-poster "anthropic" "fixture-A")))
+    (funcall p ...)))   ;; reads fixture "my test", not "fixture-A"
+
+;; Right — pick a name that doesn't collide
+(defun build-poster (subdir fixture-name)
+  (lambda (url) (read-fixture subdir fixture-name)))
+```
+
+The collision surfaces only inside deftest bodies; same code in plain Lisp works as expected.  Names to avoid in this context: `name`, plus probably any other variable the framework might bind (audit `pkg/test/deftest.go` if you suspect a collision).
 
 ### Single-letter and common-word names that are bound constants
 
@@ -264,6 +302,7 @@ This means `assert-nil` (a strict Go-nil check) panics on an empty list:
   - Function lookup at call-site package
   - `defparameter` cross-package
   - Bound constants (`e`, `stream`, `system`)
+  - `name` shadowed by deftest
 - Control flow / iteration
   - `loop` is bare
   - `run` not `routine`
