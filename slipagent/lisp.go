@@ -46,6 +46,7 @@ func loadLisp() {
 		"lisp/embeddings/openai.lisp",
 		"lisp/embeddings/voyage.lisp",
 		"lisp/vector-stores.lisp",
+		"lisp/agents.lisp",
 	} {
 		f, err := lispFS.Open(path)
 		if err != nil {
