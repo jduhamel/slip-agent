@@ -262,7 +262,54 @@
     (let* ((m1 (chat-anthropic :model "claude-haiku-4-5" :cache-control t))
            (m2 (send m1 :bind-tools nil)))
       (assert-equal "claude-haiku-4-5" (send m2 :model))
-      (assert-equal t (send m2 :cache-control)))))
+      (assert-equal t (send m2 :cache-control))))
+
+  ;; ---- End-to-end tests via recorded-poster ---------------------------
+  ;;
+  ;; These exercise the full chat-anthropic invoke path: build request,
+  ;; POST (or replay), parse response.  In :replay mode (the default,
+  ;; used by `make test`) the fixtures on disk supply the response so
+  ;; no network is touched.  In :record mode (`make refresh-fixtures`
+  ;; with AGENT_LIVE_TESTS=1 + ANTHROPIC_API_KEY) the same tests make
+  ;; real calls and overwrite the fixtures.
+
+  (deftest "chat-anthropic end-to-end invoke (replay)" suite
+    (let* ((poster (recorded-poster "anthropic" "invoke-text"))
+           (model  (chat-anthropic :model "claude-opus-4-7"
+                                   :api-key "test-key"
+                                   :poster poster))
+           (msg    (send model :invoke "Hi")))
+      (assert-equal "assistant" (message-role msg))
+      (assert-equal t (stringp (send msg :content)))
+      (assert-equal "msg_01ABC" (send msg :id))
+      (assert-equal "claude-opus-4-7"
+                    (cdr (assoc :model (send msg :response-metadata))))))
+
+  (deftest "chat-anthropic end-to-end invoke with tools (replay)" suite
+    (def-tool ant-calc-add (a b) "Add two ints." (+ a b))
+    (let* ((poster (recorded-poster "anthropic" "invoke-with-tools"))
+           (model  (send (chat-anthropic :model "claude-opus-4-7"
+                                         :api-key "test-key"
+                                         :poster poster)
+                         :bind-tools (list ant-calc-add)))
+           (msg    (send model :invoke "compute 17+25"))
+           (calls  (send msg :tool-calls)))
+      (assert-equal 1 (length calls))
+      (assert-equal "calc-add" (send (car calls) :name))
+      (assert-equal 17 (send (send (car calls) :input) :get "a"))
+      (assert-equal 25 (send (send (car calls) :input) :get "b"))))
+
+  (deftest "chat-anthropic end-to-end invoke with thinking (replay)" suite
+    (let* ((poster (recorded-poster "anthropic" "invoke-with-thinking"))
+           (model  (chat-anthropic :model "claude-opus-4-7"
+                                   :api-key "test-key"
+                                   :poster poster))
+           (msg    (send model :invoke "what is 2+2?"))
+           (blocks (send msg :content)))
+      (assert-equal t (listp blocks))
+      (assert-equal t (typep (car blocks) 'reasoning-block))
+      (assert-equal "abc123sig"
+                    (send (car blocks) :signature)))))
 
 
 ;;; ----------------------------------------------------------------------

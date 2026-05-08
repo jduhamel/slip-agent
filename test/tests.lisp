@@ -10,6 +10,10 @@
 
 (defvar agent-suite (defsuite "slip-agent" nil))
 
+;; Load the recording harness before any test file so recorded-poster
+;; and friends are available.
+(load "plugins/slip-agent/test/recorder.lisp")
+
 (load "plugins/slip-agent/test/messages_test.lisp")
 (load "plugins/slip-agent/test/callbacks_test.lisp")
 (load "plugins/slip-agent/test/runnable_test.lisp")

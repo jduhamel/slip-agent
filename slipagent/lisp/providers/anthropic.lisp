@@ -27,10 +27,16 @@
 ;;;; prompt and tool definitions on each request — cuts cost and
 ;;;; latency when the same setup is sent across many turns.
 
-(defparameter *anthropic-default-base-url* "https://api.anthropic.com/v1/messages")
-(defparameter *anthropic-default-version*  "2023-06-01")
+;; defparameter cross-package access is unreliable in Slip (the
+;; values resolve in the call-site package, not the defining one).
+;; Wrap them in functions instead — function symbol lookup works
+;; cross-package once exported.
+(defun anthropic-default-base-url () "https://api.anthropic.com/v1/messages")
+(defun anthropic-default-version  () "2023-06-01")
 
-(defflavor chat-anthropic ((cache-control nil)) (chat-model)
+(defflavor chat-anthropic
+    ((cache-control nil) (poster nil) (stream-poster nil))
+    (chat-model)
   :gettable-instance-variables
   :settable-instance-variables
   :initable-instance-variables
@@ -38,7 +44,11 @@
    "Anthropic Messages API provider.  Constructor accepts the standard
 chat-model slots plus :cache-control t for prompt caching.  base-url
 defaults to api.anthropic.com; api-key is read from the slot or the
-ANTHROPIC_API_KEY environment variable."))
+ANTHROPIC_API_KEY environment variable.
+
+poster and stream-poster are test-injection seams.  When non-nil they
+are called instead of post-json / post-json-stream — the recorder uses
+them for fixture replay and capture.  Production code leaves them nil."))
 
 (defmethod (chat-anthropic :copy) ()
   (make-instance 'chat-anthropic
@@ -49,7 +59,9 @@ ANTHROPIC_API_KEY environment variable."))
                  :api-key       api-key
                  :base-url      base-url
                  :extra         extra
-                 :cache-control cache-control))
+                 :cache-control cache-control
+                 :poster        poster
+                 :stream-poster stream-poster))
 
 ;;; ----------------------------------------------------------------------
 ;;; Request body construction
@@ -297,26 +309,30 @@ keyword-keyed alist."
 
 (defmethod (chat-anthropic :invoke-impl) (messages &rest config)
   (declare (ignore config))
-  (let* ((url     (or base-url *anthropic-default-base-url*))
+  (let* ((url     (or base-url (anthropic-default-base-url)))
          (key     (resolve-api-key self "ANTHROPIC_API_KEY"))
          (body    (build-anthropic-request
                    model messages tools cache-control
                    max-tokens temperature nil))
          (headers (list (cons "x-api-key" key)
-                        (cons "anthropic-version" *anthropic-default-version*)))
-         (response-bag (post-json url headers body)))
+                        (cons "anthropic-version" (anthropic-default-version))))
+         ;; poster slot lets tests substitute a fixture-replay or
+         ;; record-capturing function.  nil = direct call.
+         (response-bag (cond (poster (funcall poster url headers body))
+                             (t (post-json url headers body)))))
     (parse-anthropic-response response-bag)))
 
 (defmethod (chat-anthropic :stream-impl) (messages &rest config)
   (declare (ignore config))
-  (let* ((url     (or base-url *anthropic-default-base-url*))
+  (let* ((url     (or base-url (anthropic-default-base-url)))
          (key     (resolve-api-key self "ANTHROPIC_API_KEY"))
          (body    (build-anthropic-request
                    model messages tools cache-control
                    max-tokens temperature t))
          (headers (list (cons "x-api-key" key)
-                        (cons "anthropic-version" *anthropic-default-version*)))
-         (response (post-json-stream url headers body))
+                        (cons "anthropic-version" (anthropic-default-version))))
+         (response (cond (stream-poster (funcall stream-poster url headers body))
+                         (t (post-json-stream url headers body))))
          (sse-ch   (make-channel 64))
          (out-ch   (make-channel 64)))
     ;; Pump SSE frames from the response body onto sse-ch.
@@ -377,10 +393,14 @@ message_delta carries usage updates and stop_reason in metadata."
 ;;; ----------------------------------------------------------------------
 
 (defun chat-anthropic (&key (model "claude-opus-4-7") temperature max-tokens
-                            tools api-key base-url cache-control)
+                            tools api-key base-url cache-control
+                            poster stream-poster)
   "Construct a chat-anthropic chat-model.  api-key falls back to the
 ANTHROPIC_API_KEY environment variable; base-url defaults to the
-public Anthropic endpoint; cache-control t enables prompt caching."
+public Anthropic endpoint; cache-control t enables prompt caching.
+
+poster and stream-poster are test-injection seams; production code
+leaves them nil."
   (make-instance 'chat-anthropic
                  :model         model
                  :temperature   temperature
@@ -388,7 +408,9 @@ public Anthropic endpoint; cache-control t enables prompt caching."
                  :tools         tools
                  :api-key       api-key
                  :base-url      base-url
-                 :cache-control cache-control))
+                 :cache-control cache-control
+                 :poster        poster
+                 :stream-poster stream-poster))
 
 ;;; ----------------------------------------------------------------------
 ;;; Exports
@@ -397,6 +419,8 @@ public Anthropic endpoint; cache-control t enables prompt caching."
 (export 'chat-anthropic)
 
 ;; Helpers exported per the call-site-package gotcha.
+(export 'anthropic-default-base-url)
+(export 'anthropic-default-version)
 (export 'build-anthropic-request)
 (export 'parse-anthropic-response)
 (export 'parse-anthropic-usage)
