@@ -23,6 +23,8 @@
 (load "plugins/slip-agent/test/tools_test.lisp")
 (load "plugins/slip-agent/test/chat-models_test.lisp")
 (load "plugins/slip-agent/test/anthropic_test.lisp")
+(load "plugins/slip-agent/test/openai_test.lisp")
+(load "plugins/slip-agent/test/ollama_test.lisp")
 
 (defun run-tests ()
   (send agent-suite :run)

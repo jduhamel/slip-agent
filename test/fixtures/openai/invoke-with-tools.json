@@ -1,0 +1,34 @@
+{
+  "id": "chatcmpl-DEF",
+  "object": "chat.completion",
+  "created": 1715000001,
+  "model": "gpt-4o-2024-08-06",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": null,
+        "tool_calls": [
+          {
+            "id": "call_xyz789",
+            "type": "function",
+            "function": {
+              "name": "calc-add",
+              "arguments": "{\"a\":17,\"b\":25}"
+            }
+          }
+        ],
+        "refusal": null
+      },
+      "logprobs": null,
+      "finish_reason": "tool_calls"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 95,
+    "completion_tokens": 18,
+    "total_tokens": 113
+  },
+  "system_fingerprint": "fp_def456"
+}
