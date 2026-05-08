@@ -30,6 +30,7 @@ func loadLisp() {
 		"lisp/composition.lisp",
 		"lisp/prompts.lisp",
 		"lisp/output-parsers.lisp",
+		"lisp/tools.lisp",
 	} {
 		f, err := lispFS.Open(path)
 		if err != nil {
