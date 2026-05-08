@@ -113,6 +113,7 @@ These names panic with "X is a constant and thus can't be set" when used as para
 - `e` — Euler's number
 - `stream` — bound (likely related to standard streams)
 - `system` — bound
+- `instance` — bound
 
 ```lisp
 ;; Wrong
@@ -234,6 +235,28 @@ A real footgun for any code that builds a string by appending substrings, some o
 
 Use `(format stream "~A" value)` everywhere `princ` would be tempting in a build-a-string loop.
 
+## Concurrency
+
+### Flavor instance Vars maps are not thread-safe by default
+
+Reading and writing slots on a flavor instance from multiple goroutines without explicit synchronization triggers Go's "concurrent map read and map write" panic.  Even if you protect your own slots with a `make-mutex`, Slip's underlying instance Vars map is unprotected.
+
+```lisp
+;; Wrong — concurrent :add-message calls race on the Vars map
+(let ((h (make-instance 'in-memory-history)))
+  (dotimes (i 10)
+    (run (send h :add-message (human-message "x")))))
+;; => fatal error: concurrent map read and map write
+
+;; Right — call set-synchronized once at construction
+(let ((h (make-instance 'in-memory-history)))
+  (set-synchronized h t)
+  (dotimes (i 10)
+    (run (send h :add-message (human-message "x")))))
+```
+
+`set-synchronized` lives in the `clos` package but works on flavor instances too via the shared Instance interface.  Apply to any flavor instance whose slots are written from multiple goroutines — including agents in D12 if they share state across parallel tool calls.
+
 ## Bags / JSON / nil
 
 ### `bag-set` normalises nested values to native alists
@@ -301,7 +324,7 @@ This means `assert-nil` (a strict Go-nil check) panics on an empty list:
 - Identifiers / scoping
   - Function lookup at call-site package
   - `defparameter` cross-package
-  - Bound constants (`e`, `stream`, `system`)
+  - Bound constants (`e`, `stream`, `system`, `instance`)
   - `name` shadowed by deftest
 - Control flow / iteration
   - `loop` is bare
@@ -310,6 +333,8 @@ This means `assert-nil` (a strict Go-nil check) panics on an empty list:
   - `gi:recover` cross-package
 - Strings / printing
   - `princ ""` emits `""`
+- Concurrency
+  - Flavor Vars maps need `set-synchronized`
 - Bags / JSON / nil
   - `bag-set` of nested bags
   - `bag-parse` needs existing bag
