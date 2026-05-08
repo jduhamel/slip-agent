@@ -15,6 +15,7 @@
 (load "plugins/slip-agent/test/runnable_test.lisp")
 (load "plugins/slip-agent/test/composition_test.lisp")
 (load "plugins/slip-agent/test/prompts_test.lisp")
+(load "plugins/slip-agent/test/output-parsers_test.lisp")
 
 (defun run-tests ()
   (send agent-suite :run)
