@@ -1,0 +1,14 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "object": "embedding",
+      "index": 0,
+      "embedding": [0.11, 0.22, 0.33, 0.44]
+    }
+  ],
+  "model": "voyage-3",
+  "usage": {
+    "total_tokens": 5
+  }
+}
