@@ -191,6 +191,25 @@ Slip's `loop` looks for a `*ReturnResult*` as the loop body's value.  But if `re
     (when done (return nil))))
 ```
 
+### Top-level macros from a `require`d package don't resolve in the same file
+
+Slip processes a script file in three phases — Read, Compile, Eval — for the **whole file** before any of its forms run.  The Compile pass expands macros.  So a script that calls `(require ...)` and then immediately uses a macro from the required package fails: at compile time, the macro isn't yet registered.
+
+```lisp
+;; Wrong — def-tool isn't a macro yet at compile time
+(require 'agent "plugins/slip-agent")
+(def-tool calc (a b) "Adds." (+ a b))
+;; => Function def-tool is not defined.
+
+;; Right — wrap in any form whose body is evaluated AFTER (require ...)
+(require 'agent "plugins/slip-agent")
+(let ()
+  (def-tool calc (a b) "Adds." (+ a b))
+  (calc 17 25))
+```
+
+`(let () ...)`, `(progn ...)` inside a function call, and `(load "second-file.lisp")` all work because they defer the inner forms' compilation past the outer file's eval.  Function-only APIs (no macros) are not affected.
+
 ### `gi:recover` from a function called cross-package sometimes fails to resolve
 
 When a `defun` body in package `A` uses `(gi:recover ...)` and the function is called from `cl-user`, the package-qualified macro lookup occasionally fails with "Function gi:recover is not defined."  Workaround: use bare `recover` (gi is already in the use-chain).
@@ -331,6 +350,7 @@ This means `assert-nil` (a strict Go-nil check) panics on an empty list:
   - `run` not `routine`
   - `return` shadowed by trailing branch forms
   - `gi:recover` cross-package
+  - Top-level macros from `require`d packages need a `(let () ...)` wrapper
 - Strings / printing
   - `princ ""` emits `""`
 - Concurrency
