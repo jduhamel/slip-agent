@@ -41,6 +41,11 @@ func loadLisp() {
 		"lisp/init-chat-model.lisp",
 		"lisp/documents.lisp",
 		"lisp/chat-history.lisp",
+		"lisp/embeddings/base.lisp",
+		"lisp/embeddings/fake.lisp",
+		"lisp/embeddings/openai.lisp",
+		"lisp/embeddings/voyage.lisp",
+		"lisp/vector-stores.lisp",
 	} {
 		f, err := lispFS.Open(path)
 		if err != nil {
