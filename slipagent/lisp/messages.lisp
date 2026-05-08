@@ -273,7 +273,9 @@ assembly arrives in D8.  Returns an ai-message."
       (all-strings
        (let ((joined (with-output-to-string (out)
                        (dolist (chunk chunks)
-                         (princ (send chunk :content) out)))))
+                         ;; format ~A rather than princ — princ of an
+                         ;; empty string emits literal "" in Slip.
+                         (format out "~A" (send chunk :content))))))
          (ai-message :content joined
                      :response-metadata last-meta
                      :usage last-usage

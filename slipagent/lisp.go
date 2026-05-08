@@ -31,6 +31,8 @@ func loadLisp() {
 		"lisp/prompts.lisp",
 		"lisp/output-parsers.lisp",
 		"lisp/tools.lisp",
+		"lisp/chat-models.lisp",
+		"lisp/fake-chat-model.lisp",
 	} {
 		f, err := lispFS.Open(path)
 		if err != nil {
