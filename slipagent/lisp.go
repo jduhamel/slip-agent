@@ -33,6 +33,9 @@ func loadLisp() {
 		"lisp/tools.lisp",
 		"lisp/chat-models.lisp",
 		"lisp/fake-chat-model.lisp",
+		"lisp/sse.lisp",
+		"lisp/http-helpers.lisp",
+		"lisp/providers/anthropic.lisp",
 	} {
 		f, err := lispFS.Open(path)
 		if err != nil {
