@@ -18,6 +18,7 @@
 (load "plugins/slip-agent/test/output-parsers_test.lisp")
 (load "plugins/slip-agent/test/tools_test.lisp")
 (load "plugins/slip-agent/test/chat-models_test.lisp")
+(load "plugins/slip-agent/test/anthropic_test.lisp")
 
 (defun run-tests ()
   (send agent-suite :run)

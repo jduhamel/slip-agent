@@ -68,14 +68,24 @@ Workaround: `(export 'helper)` for any helper called across defun boundaries fro
 
 Same root cause as the above.  Avoid plugin-private special variables that user code (or plugin code called from user-package context) needs to read.  Either inline the value at each use site or export the parameter.
 
-### `e` is a bound constant (Euler's number)
+### Single-letter and common-word names that are bound constants
+
+These names panic with "X is a constant and thus can't be set" when used as parameters or `let` bindings:
+
+- `e` — Euler's number
+- `stream` — bound (likely related to standard streams)
+- `system` — bound
 
 ```lisp
-;; Wrong — "e is a constant and thus can't be set"
+;; Wrong
 (dolist (e events) ...)
+(defun foo (model stream) ...)
+(let ((system (send body :get "system"))) ...)
 
 ;; Right
 (dolist (evt events) ...)
+(defun foo (model streaming-p) ...)        ;; or in-stream / out-stream
+(let ((sys-field (send body :get "system"))) ...)
 ```
 
 Other CL-style "free" short variable names that are taken in Slip have not been audited; rename rather than fight if a "constant" panic appears.
@@ -112,6 +122,55 @@ The `dolist` + `push` + `nreverse` pattern is the slip-agent default.
 ;; Multi-form body — wrap in progn (run is a single-form macro)
 (run (progn (a) (b) (c)))
 ```
+
+### `return` inside a cond whose outer branch has trailing forms is shadowed
+
+Slip's `loop` looks for a `*ReturnResult*` as the loop body's value.  But if `return` is inside an inner `cond` and the **outer** `cond` branch has more forms after it, those forms overwrite the `*ReturnResult*` and the loop never exits.
+
+```lisp
+;; Wrong — return is shadowed by the trailing setq forms.
+(loop
+  (let ((line (read-line in nil :eof)))
+    (cond
+      ((blank-line-p line)
+       (cond ((terminator-p data) (return nil))    ;; <- lost
+             (t (push-frame data)))
+       (setq event-type nil)        ;; <- becomes branch value
+       (setq data nil)))))
+
+;; Right — set a flag, check it last in the loop body so the
+;; *ReturnResult* is what the loop sees.
+(let ((done nil))
+  (loop
+    (let ((line (read-line in nil :eof)))
+      (cond
+        ((blank-line-p line)
+         (cond ((terminator-p data) (setq done t))
+               (t (push-frame data)))
+         (setq event-type nil)
+         (setq data nil))))
+    (when done (return nil))))
+```
+
+### `gi:recover` from a function called cross-package sometimes fails to resolve
+
+When a `defun` body in package `A` uses `(gi:recover ...)` and the function is called from `cl-user`, the package-qualified macro lookup occasionally fails with "Function gi:recover is not defined."  Workaround: use bare `recover` (gi is already in the use-chain).
+
+```lisp
+;; Sometimes wrong — "Function gi:recover is not defined."
+(defun safe-call (...)
+  (gi:recover err
+    (handle err)
+    (do-thing)))
+
+;; More reliable
+(defun safe-call (...)
+  (recover err
+    (handle err)
+    (do-thing)))
+```
+
+Inside `defmethod` bodies and inside `(run ...)` forms, the gi: prefix tends to work.  The cross-package issue mostly affects standalone `defun`s.
 
 ## Strings / printing
 
@@ -204,10 +263,12 @@ This means `assert-nil` (a strict Go-nil check) panics on an empty list:
 - Identifiers / scoping
   - Function lookup at call-site package
   - `defparameter` cross-package
-  - `e` is a constant
+  - Bound constants (`e`, `stream`, `system`)
 - Control flow / iteration
   - `loop` is bare
   - `run` not `routine`
+  - `return` shadowed by trailing branch forms
+  - `gi:recover` cross-package
 - Strings / printing
   - `princ ""` emits `""`
 - Bags / JSON / nil

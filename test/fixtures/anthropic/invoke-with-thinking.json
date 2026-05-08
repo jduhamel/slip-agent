@@ -1,0 +1,16 @@
+{
+  "id": "msg_03GHI",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-opus-4-7",
+  "content": [
+    {"type": "thinking", "thinking": "The user asked for 2+2. I should just return 4.", "signature": "abc123sig"},
+    {"type": "text", "text": "4"}
+  ],
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+    "input_tokens": 10,
+    "output_tokens": 35
+  }
+}
