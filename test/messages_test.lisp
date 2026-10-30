@@ -166,6 +166,18 @@
         (assert-equal "function" (cdr (assoc "type" entry :test #'equal)))
         (assert-equal "calc" (cdr (assoc "name" fn :test #'equal))))))
 
+  (deftest "message->bag writes tool_call arguments as strict JSON" suite
+    ;; bag->message accepts SEN as well, so the round-trip below cannot
+    ;; tell the two apart; a strict parse can.
+    (let* ((tu     (tool-use-block :id "call_1" :name "calc" :input (make-bag "{a:2, b:3}")))
+           (b      (message->bag (ai-message :content (list tu))))
+           (fn     (cdr (assoc "function" (car (send b :get "tool_calls")) :test #'equal)))
+           (args   (cdr (assoc "arguments" fn :test #'equal)))
+           (parsed nil))
+      (json-parse (lambda (x) (setf parsed x)) args t)
+      (assert-equal 2 (send parsed :get "a"))
+      (assert-equal 3 (send parsed :get "b"))))
+
   (deftest "message->bag emits tool_call_id for tool-message" suite
     (let* ((m (tool-message "5" "call_1"))
            (b (message->bag m)))
