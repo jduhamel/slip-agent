@@ -362,7 +362,8 @@ OpenAI tool_calls array."
     (bag-set fn (send block :name) "name")
     ;; OpenAI sends arguments as a JSON-encoded string, not a nested object.
     (bag-set fn (bag-write (cond ((null input) (make-bag "{}"))
-                                 (t input)))
+                                 (t input))
+                                 nil :json t)
              "arguments")
     (bag-set b fn "function")
     b))
